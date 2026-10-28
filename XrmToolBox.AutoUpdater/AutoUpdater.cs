@@ -185,17 +185,27 @@ namespace XrmToolBox.AutoUpdater
         private void CopyDirectoryContent(string directoryPath, string destinationDirectoryPath, BackgroundWorker worker, string action)
         {
             var directory = new DirectoryInfo(directoryPath);
+            var updaterPath = Assembly.GetExecutingAssembly().Location;
+
             foreach (var fi in directory.GetFiles())
             {
                 if (fi.FullName.ToLower().EndsWith(".command.xml") && File.Exists(Path.Combine(destinationDirectoryPath, fi.Name)))
                 {
-                    // If the file already exists, we skip it
                     continue;
                 }
 
                 worker.ReportProgress(0, action + " " + fi.Name);
 
-                fi.CopyTo(Path.Combine(destinationDirectoryPath, fi.Name), true);
+                var destinationPath = Path.Combine(destinationDirectoryPath, fi.Name);
+
+                try
+                {
+                    fi.CopyTo(destinationPath, true);
+                }
+                catch (IOException) when (string.Equals(destinationPath, updaterPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Ignore: updater executable cannot overwrite itself while running
+                }
             }
 
             foreach (var di in directory.GetDirectories())
